@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fichas Técnicas Grupo Bolsas</title>
+<style>
+@font-face{font-family:'Archivo';src:url('fonts/archivo-latin-standard-normal.woff2') format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('fonts/ibm-plex-sans-latin-300-normal.woff2') format('woff2');font-weight:300;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('fonts/ibm-plex-sans-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url('fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url('fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url('fonts/ibm-plex-mono-latin-600-normal.woff2') format('woff2');font-weight:600;font-display:swap}
+:root{color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+
+/* Layout concept: black engineering-magazine pages, one landscape sheet at a time, page turns from the left edge.
+   Logo colors: yellow + red bands, charcoal lines. Type: Archivo (wide/condensed display), Plex Sans (text), Plex Mono (specs). */
+:root{
+  --ink:#050506;
+  --paper:#0b0b0c;
+  --line:#2b2b2e;
+  --line-2:#3a3a3e;
+  --text:#f1f1ee;
+  --mute:#9b9ba1;
+  --yel:#ffe500;
+  --red:#ee2f37;
+  --f-display:'Archivo','Arial Narrow','Helvetica Neue',Arial,sans-serif;
+  --f-text:'IBM Plex Sans','Helvetica Neue',Arial,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --bar-h:54px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ink);color:var(--text);font-family:var(--f-text);overflow:hidden;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+:focus-visible{outline:2px solid var(--yel);outline-offset:2px}
+
+/* ---------- shell ---------- */
+.app{height:100%;display:grid;grid-template-rows:1fr var(--bar-h)}
+.book{container:book/size;display:grid;place-items:center;min-height:0;padding:clamp(6px,1.6vmin,18px)}
+.stage{position:relative;width:min(100cqw,160cqh);aspect-ratio:16/10;perspective:2600px;
+  box-shadow:0 0 0 1px #1a1a1c,0 30px 80px rgba(0,0,0,.7)}
+@container book (max-aspect-ratio:1/1){
+  .stage{width:100cqw;height:100cqh;aspect-ratio:auto}
+}
+.page{container:page/size;position:absolute;inset:0;background:var(--paper);overflow:hidden;
+  transform-origin:0 50%;will-change:transform;
+  transition:transform .85s cubic-bezier(.62,.02,.22,1),visibility 0s 0s}
+.page.turned{transform:rotateY(-112deg);visibility:hidden;pointer-events:none;
+  transition:transform .85s cubic-bezier(.62,.02,.22,1),visibility 0s .85s;box-shadow:12px 0 40px rgba(0,0,0,.8)}
+.page.far{visibility:hidden}
+.page .shade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .85s;z-index:9}
+.page.next .shade{opacity:.55}
+.page.turned .shade{opacity:.7}
+.dragging .page,.boot .page,.boot .page .shade{transition:none!important}
+
+/* ---------- page canvas ---------- */
+.pg{--u:1cqw;--pad:calc(var(--u)*4);
+  position:absolute;inset:0;overflow:auto;padding:calc(var(--u)*7) var(--pad) calc(var(--u)*5.5);
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:calc(var(--u)*4) calc(var(--u)*4);
+  --fs-s:max(10px,calc(var(--u)*.78));--fs-b:max(13px,calc(var(--u)*1.2));--fs-m:max(14px,calc(var(--u)*1.45));
+  scrollbar-width:thin;scrollbar-color:#333 transparent}
+@container page (max-aspect-ratio:1/1){
+  .pg .bot{display:none}.pg .top .eyebrow:last-child{display:none}
+  .pg{--u:2.3cqw;--pad:max(16px,calc(var(--u)*2));padding-top:calc(var(--u)*8);padding-bottom:calc(var(--u)*8)}
+}
+.eyebrow{font-family:var(--f-mono);font-size:var(--fs-s);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.eyebrow b{color:var(--accent,var(--yel));font-weight:600}
+
+/* running header / footer */
+.top,.bot{position:absolute;left:var(--pad);right:var(--pad);display:flex;justify-content:space-between;align-items:center;gap:calc(var(--u)*2);z-index:2}
+.top{top:calc(var(--u)*2.2)}
+.bot{bottom:calc(var(--u)*2)}
+.tri{display:inline-grid;gap:calc(var(--u)*.22);margin-right:calc(var(--u)*1.1);vertical-align:middle}
+.tri i{display:block;width:calc(var(--u)*2.6);height:max(2px,calc(var(--u)*.32))}
+.tri i:nth-child(1){background:var(--yel)}
+.tri i:nth-child(2){background:var(--red)}
+.tri i:nth-child(3){background:var(--line-2)}
+.pno{font-family:var(--f-mono);font-size:var(--fs-s);color:var(--mute);letter-spacing:.1em}
+.pno b{color:var(--text);font-weight:600;font-size:max(12px,calc(var(--u)*1.05))}
+
+/* ---------- cover ---------- */
+.cover .pg{display:grid;grid-template-columns:1.12fr .88fr;gap:calc(var(--u)*3);align-items:center}
+.cover .big{font-family:var(--f-display);font-stretch:62%;font-weight:900;text-transform:uppercase;line-height:.84;letter-spacing:-.01em;
+  font-size:calc(var(--u)*13.2);margin:calc(var(--u)*1.2) 0 calc(var(--u)*1.8)}
+.cover .big span{display:block}
+.cover .big .y{color:var(--yel)}
+.cover .big .o{color:transparent;-webkit-text-stroke:max(1.5px,calc(var(--u)*.14)) var(--text)}
+.cover .lede{font-size:var(--fs-m);line-height:1.5;color:#d6d6d2;max-width:34em;font-weight:300}
+.cover .stats{display:flex;gap:calc(var(--u)*2.4);margin-top:calc(var(--u)*2.4);flex-wrap:wrap}
+.stat{border-top:2px solid var(--yel);padding-top:calc(var(--u)*.7)}
+.stat:nth-child(2){border-color:var(--red)}
+.stat:nth-child(3){border-color:var(--line-2)}
+.stat b{display:block;font-family:var(--f-display);font-stretch:70%;font-weight:800;font-size:calc(var(--u)*3.6);line-height:1}
+.stat span{font-family:var(--f-mono);font-size:var(--fs-s);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.cover .logo{width:100%;height:auto;display:block;justify-self:end;filter:drop-shadow(0 20px 40px rgba(0,0,0,.6))}
+.cover .tape{position:absolute;left:0;right:0;bottom:0;height:calc(var(--u)*1.1);
+  background:repeating-linear-gradient(-45deg,var(--yel) 0 calc(var(--u)*1.6),#0b0b0c calc(var(--u)*1.6) calc(var(--u)*3.2))}
+.cover .wm{position:absolute;right:calc(var(--u)*-1);bottom:calc(var(--u)*2);font-family:var(--f-display);font-stretch:62%;font-weight:900;
+  font-size:calc(var(--u)*26);line-height:.8;color:transparent;-webkit-text-stroke:1px #1d1d20;letter-spacing:-.02em;pointer-events:none;white-space:nowrap}
+.cover .pg>*:not(.wm):not(.tape){position:relative;z-index:1}
+@container page (max-aspect-ratio:1/1){
+  .cover .pg{grid-template-columns:1fr;align-content:start;gap:calc(var(--u)*2)}
+  .cover .big{font-size:calc(var(--u)*11.5)}
+  .cover .logo{order:-1;width:70%;justify-self:start}
+  .cover .wm{display:none}
+}
+
+/* ---------- contents ---------- */
+.toc .pg{display:grid;grid-template-columns:.8fr 1.2fr;gap:calc(var(--u)*5)}
+.h-xl{font-family:var(--f-display);font-stretch:62%;font-weight:900;text-transform:uppercase;line-height:.86;font-size:calc(var(--u)*9.4);margin:calc(var(--u)*1) 0}
+.h-xl em{font-style:normal;color:var(--yel)}
+.toc ol{list-style:none;margin:0;padding:0;align-self:center}
+.toc li{border-bottom:1px solid var(--line)}
+.toc li:first-child{border-top:1px solid var(--line)}
+.toc button{width:100%;display:grid;grid-template-columns:calc(var(--u)*4.2) 1fr auto auto;gap:calc(var(--u)*1.4);align-items:baseline;text-align:left;
+  padding:calc(var(--u)*.95) 0;transition:background .2s,padding .2s}
+.toc button:hover{background:rgba(255,255,255,.04);padding-left:calc(var(--u)*.8)}
+.toc .n{font-family:var(--f-mono);font-size:var(--fs-s);color:var(--accent)}
+.toc .t{font-family:var(--f-display);font-stretch:75%;font-weight:800;text-transform:uppercase;font-size:calc(var(--u)*2.3);line-height:1;letter-spacing:.005em}
+.toc .t small{font-size:.5em;color:var(--mute);font-weight:500;letter-spacing:.12em;margin-right:.7em;font-stretch:100%}
+.toc .s{font-family:var(--f-mono);font-size:var(--fs-s);color:var(--mute);letter-spacing:.08em;text-transform:uppercase}
+.toc .p{font-family:var(--f-mono);font-size:var(--fs-s);color:var(--text)}
+@container page (max-aspect-ratio:1/1){
+  .toc .pg{grid-template-columns:1fr;gap:calc(var(--u)*2)}
+  .h-xl{font-size:calc(var(--u)*8)}
+  .toc .t{font-size:calc(var(--u)*3.1)}.toc .t small{display:none}
+  .toc .s{display:none}
+  .toc button{grid-template-columns:calc(var(--u)*5) 1fr auto;padding:calc(var(--u)*1.5) 0}
+}
+
+/* ---------- line opener / ficha ---------- */
+.opener .pg{display:grid;grid-template-columns:.9fr 1.1fr;gap:calc(var(--u)*4.5)}
+.op-l{display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.num{font-family:var(--f-display);font-stretch:62%;font-weight:900;font-size:calc(var(--u)*25);line-height:.78;
+  color:transparent;-webkit-text-stroke:max(1.5px,calc(var(--u)*.14)) var(--accent);letter-spacing:-.02em;margin-left:calc(var(--u)*-.6)}
+.kick{font-family:var(--f-mono);font-size:var(--fs-s);letter-spacing:.2em;color:var(--accent);margin-bottom:calc(var(--u)*.9)}
+.lname{font-family:var(--f-display);font-stretch:62%;font-weight:900;text-transform:uppercase;line-height:.86;font-size:calc(var(--u)*7.4);overflow-wrap:break-word}
+.lname.m{font-size:calc(var(--u)*6)}
+.lname.l{font-size:calc(var(--u)*4.6)}
+.lname small{display:block;font-family:var(--f-mono);font-stretch:100%;font-weight:500;font-size:var(--fs-s);letter-spacing:.3em;color:var(--mute);margin-bottom:calc(var(--u)*.9)}
+.sku{display:flex;align-items:baseline;gap:calc(var(--u)*1);margin-top:calc(var(--u)*2.2);padding-top:calc(var(--u)*1);border-top:1px solid var(--line-2)}
+.sku b{font-family:var(--f-display);font-stretch:70%;font-weight:800;font-size:calc(var(--u)*4.6);line-height:1;color:var(--accent)}
+.sku span{font-family:var(--f-mono);font-size:var(--fs-s);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.op-r{display:flex;flex-direction:column;min-width:0}
+.sheet-h{display:flex;align-items:center;gap:calc(var(--u)*1.2);margin-bottom:calc(var(--u)*.6)}
+.sheet-h::after{content:"";flex:1;height:1px;background:var(--line-2)}
+.spec{display:grid;grid-template-columns:calc(var(--u)*13) 1fr;gap:calc(var(--u)*.4) calc(var(--u)*1.6);margin:0}
+.spec dt,.spec dd{margin:0;padding:calc(var(--u)*.85) 0;border-bottom:1px solid var(--line)}
+.spec dt{font-family:var(--f-mono);font-size:var(--fs-s);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);padding-top:calc(var(--u)*1.05)}
+.spec dd{font-size:var(--fs-b);line-height:1.4}
+.chips{display:flex;flex-wrap:wrap;gap:calc(var(--u)*.5)}
+.chip{font-family:var(--f-mono);font-size:max(11px,calc(var(--u)*.88));border:1px solid var(--line-2);padding:calc(var(--u)*.3) calc(var(--u)*.7);color:var(--text);letter-spacing:.02em}
+.desc{margin-top:calc(var(--u)*2);position:relative;padding-left:calc(var(--u)*4)}
+.desc::before{content:"“";position:absolute;left:0;top:calc(var(--u)*-.6);font-family:var(--f-display);font-weight:900;font-size:calc(var(--u)*7);line-height:1;color:var(--accent)}
+.desc p{margin:0;font-weight:300;font-size:max(14px,calc(var(--u)*1.7));line-height:1.5;color:#e4e4e0}
+@container page (max-aspect-ratio:1/1){
+  .opener .pg{grid-template-columns:1fr;gap:calc(var(--u)*3)}
+  .num{font-size:calc(var(--u)*26)}
+  .lname{font-size:calc(var(--u)*9.4)}.lname.m{font-size:calc(var(--u)*8)}.lname.l{font-size:calc(var(--u)*6.4)}
+  .spec{grid-template-columns:1fr;gap:0}
+  .spec dt{border-bottom:0;padding-bottom:0}
+  .spec dd{padding-top:calc(var(--u)*.4)}
+}
+
+/* ---------- process ---------- */
+.proc .pg{display:grid;grid-template-rows:auto 1fr auto auto;gap:calc(var(--u)*1.8)}
+.h-l{font-family:var(--f-display);font-stretch:70%;font-weight:900;text-transform:uppercase;line-height:.9;font-size:calc(var(--u)*5.4);margin:calc(var(--u)*.8) 0 0;max-width:20em}
+.h-l em{font-style:normal;color:var(--accent)}
+.plate{position:relative;display:grid;place-items:center;border:1px solid var(--line);padding:calc(var(--u)*2.4);min-height:0;
+  background:radial-gradient(120% 90% at 50% 40%,rgba(255,255,255,.035),transparent 70%)}
+.plate::before,.plate::after{content:"";position:absolute;width:calc(var(--u)*1.6);height:calc(var(--u)*1.6);border:2px solid var(--accent)}
+.plate::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+.plate::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+.plate img{width:100%;height:auto;max-height:100%;object-fit:contain;mix-blend-mode:screen;display:block}
+.fig{display:flex;justify-content:space-between;gap:calc(var(--u)*2);flex-wrap:wrap}
+.stages{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;border-top:1px solid var(--line-2)}
+.stages div{padding:calc(var(--u)*.9) calc(var(--u)*1) 0 0;position:relative}
+.stages div::before{content:"";position:absolute;left:0;top:-3px;width:calc(var(--u)*2.4);height:3px;background:var(--accent)}
+.stages b{display:block;font-family:var(--f-mono);font-size:var(--fs-s);color:var(--accent);font-weight:500;letter-spacing:.1em;margin-bottom:calc(var(--u)*.3)}
+.stages span{font-family:var(--f-display);font-stretch:78%;font-weight:800;text-transform:uppercase;font-size:calc(var(--u)*1.5);line-height:1.05}
+.stages em{display:block;font-style:normal;font-family:var(--f-mono);font-size:max(9px,calc(var(--u)*.65));color:var(--mute);letter-spacing:.1em;text-transform:uppercase;margin-top:.3em}
+@container page (max-aspect-ratio:1/1){
+  .stages{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:repeat(2,1fr);row-gap:calc(var(--u)*1.2)}
+  .stages span{font-size:calc(var(--u)*3)}
+  .proc .pg{display:flex;flex-direction:column;gap:calc(var(--u)*2)}
+  .h-l{font-size:calc(var(--u)*7)}
+  .pg>*{flex-shrink:0}
+  .plate{padding:calc(var(--u)*1.4);overflow-x:auto;display:block;min-height:auto}
+  .plate img{width:auto;max-width:none;max-height:none;height:calc(var(--u)*28);mix-blend-mode:screen}
+  .plate::after{display:none}
+}
+
+/* ---------- variants ---------- */
+.vars .pg{display:grid;grid-template-columns:.62fr 1.38fr;gap:calc(var(--u)*4.5)}
+.vl{display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.vbig{font-family:var(--f-display);font-stretch:62%;font-weight:900;font-size:calc(var(--u)*17);line-height:.8;color:var(--accent);letter-spacing:-.02em}
+.vnote{font-size:var(--fs-b);color:#c9c9c5;font-weight:300;line-height:1.5}
+.tbl{width:100%;border-collapse:collapse;align-self:center}
+.tbl th{font-family:var(--f-mono);font-size:var(--fs-s);letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--mute);text-align:left;
+  padding:0 calc(var(--u)*1) calc(var(--u)*.9) 0;border-bottom:2px solid var(--accent)}
+.tbl td{padding:calc(var(--u)*1.05) calc(var(--u)*1) calc(var(--u)*1.05) 0;border-bottom:1px solid var(--line);vertical-align:top;font-size:var(--fs-b);line-height:1.4}
+.tbl td:first-child{font-family:var(--f-display);font-stretch:78%;font-weight:800;text-transform:uppercase;font-size:calc(var(--u)*1.75);line-height:1.05;letter-spacing:.005em;width:30%}
+.tbl td.c{font-family:var(--f-mono);color:var(--accent);white-space:nowrap}
+.tbl td.p{font-family:var(--f-mono);color:var(--mute);font-size:var(--fs-s);letter-spacing:.06em;text-transform:uppercase}
+.tbl tr:hover td{background:rgba(255,255,255,.025)}
+.tw{overflow-x:auto;align-self:center;min-width:0}
+@container page (max-aspect-ratio:1/1){
+  .vars .pg{display:flex;flex-direction:column;gap:calc(var(--u)*3)}
+  .vars .pg>*{flex-shrink:0}
+  .vl{gap:calc(var(--u)*2)}
+  .vbig{font-size:calc(var(--u)*12);line-height:1}
+  .tbl{min-width:560px;align-self:auto}
+  .tw{align-self:stretch}
+  .tbl td:first-child{font-size:calc(var(--u)*3.2)}
+}
+
+/* ---------- closing ---------- */
+.end .pg{display:grid;grid-template-columns:.8fr 1.2fr;gap:calc(var(--u)*4);align-items:center}
+.end img{width:100%;height:auto;display:block;filter:drop-shadow(0 18px 30px rgba(0,0,0,.6))}
+.end .h-xl{font-size:calc(var(--u)*8.2)}
+.end p{font-size:var(--fs-m);font-weight:300;line-height:1.55;color:#d6d6d2;max-width:30em}
+.end .cta{display:inline-block;margin-top:calc(var(--u)*1.6);padding:calc(var(--u)*.7) calc(var(--u)*1.2);border:1px solid var(--yel);color:var(--yel);font-family:var(--f-mono);font-weight:600;
+  font-size:var(--fs-s);letter-spacing:.14em;text-transform:uppercase}
+.end .tape{position:absolute;left:0;right:0;bottom:0;height:calc(var(--u)*1.1);background:repeating-linear-gradient(-45deg,var(--red) 0 calc(var(--u)*1.6),#0b0b0c calc(var(--u)*1.6) calc(var(--u)*3.2))}
+@container page (max-aspect-ratio:1/1){
+  .end .pg{grid-template-columns:1fr}
+  .end img{width:60%}
+  .end .h-xl{font-size:calc(var(--u)*8)}
+}
+
+/* ---------- controls ---------- */
+.bar{display:flex;align-items:center;gap:12px;padding:0 max(14px,env(safe-area-inset-left,0px)) env(safe-area-inset-bottom,0px) max(14px,env(safe-area-inset-left,0px));
+  height:calc(var(--bar-h) + env(safe-area-inset-bottom,0px));background:#000;border-top:1px solid #1b1b1d}
+.bar button{height:36px;min-width:36px;display:grid;place-items:center;border:1px solid #2a2a2d;font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;padding:0 12px;text-transform:uppercase;transition:background .15s,border-color .15s}
+.bar button:hover:not(:disabled){background:#161618;border-color:var(--yel)}
+.bar button:disabled{opacity:.3;cursor:default}
+.prog{flex:1;height:3px;background:#1d1d20;position:relative;min-width:40px}
+.prog i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--yel),var(--red));width:0;transition:width .5s}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--mute);letter-spacing:.1em;min-width:5.5em;text-align:center}
+.count b{color:var(--text);font-weight:600}
+@media (max-width:520px){.bar button.lbl span{display:none}.count{min-width:4.5em}}
+@media (prefers-reduced-motion:reduce){
+  .page,.page.turned,.page .shade,.prog i{transition-duration:.01s!important;transition-delay:0s!important}
+}
+</style>
+
+<div class="app">
+  <div class="book" id="book"><div class="stage boot" id="stage"></div></div>
+  <nav class="bar" aria-label="Navegación de la revista">
+    <button id="prev" aria-label="Página anterior">←</button>
+    <button id="home" class="lbl" aria-label="Ir al contenido">☰<span>&nbsp;Contenido</span></button>
+    <div class="prog"><i id="progress"></i></div>
+    <div class="count" id="count"></div>
+    <button id="next" aria-label="Página siguiente">→</button>
+  </nav>
+</div>
+
+<script>
+const DATA = [{"n": 1, "name": "BIOPOLI PLÁSTICO", "sku": "63 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli Plástico"], ["Tipos disponibles", "Suelta, Rollo, Camiseta Plástico, Rollo Camiseta, Medidas Chicas, Bobina"], ["Material base", "LLDPE (mayoría) + LDPE (menor proporción)"], ["Colores", "Transparente, Color, Negra (según tipo)"], ["Rango de calibres", "CAL 90 a CAL 370 (varía por tipo y medida)"], ["Presentación", "Bulto"], ["Descripción general", "Bolsa producida con una mezcla de polietilenos (LLDPE y LDPE) cuya estructura molecular ramificada le da flexibilidad, baja rigidez y buena resistencia a la humedad — la opción de uso general para hogar y comercio."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["Suelta", "14×20 a 90×120×300 (17 medidas) + churro y medida especial", "CAL 140 – 310", "Bulto"], ["Rollo", "10×20 a 60×90 (12 medidas) + medida especial", "CAL 90 – 160", "Bulto"], ["Camiseta Plástico", "Licorera 18×53 a Jumbo 45×85 (Transparente / Color / Negra)", "CAL 290 – 370", "Bulto"], ["Rollo Camiseta Transparente", "Chico, Mediano, Grande", "CAL 190 – 210", "Bulto"], ["Medidas Chicas", "7×22 a 12×25 (12 medidas)", "CAL 140 – 160", "Bulto"], ["Bobina", "5×300, 6×300 + medida especial", "CAL 290 – 310", "Bulto"]], "service": null, "stages": ["Mezclado", "Extrusión", "Impresión (si aplica)", "Corte / Sellado", "Empaque"]}, {"n": 2, "name": "BIOPOLI POLIPAPEL", "sku": "32 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli Polipapel"], ["Tipos disponibles", "Suelta, Rollo, Laminilla (caja/bulto/rollo), Boutique, Verde Perforada, Camiseta"], ["Material base", "HDPE + Carga"], ["Colores", "Por pedido"], ["Rango de calibres", "CAL 90 a CAL 260 (varía por tipo)"], ["Presentación", "Bulto / Caja (laminilla)"], ["Descripción general", "Empaque plástico de calibre delgado pero rígido, pensado para cargar productos ligeros o medianos con buena resistencia usando poco material — eficiente cuando se necesita fuerza sin agregar peso extra a la bolsa."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["Suelta", "15×25 a 60×90 (9 medidas) + medida especial", "CAL 90 – 110", "Bulto"], ["Rollo", "15×25 a 60×90 (9 medidas) + medida especial", "CAL 90 – 110", "Bulto"], ["Caja de Laminilla 5 kg", "20×30, 25×35, 30×40", "CAL 90 – 110", "Caja"], ["Bulto de laminilla 25 kg / Rollo laminilla", "25×35", "CAL 90 – 110", "Bulto"], ["Boutique Blanca", "40×50", "CAL 240 – 260", "Bulto"], ["Verde Perforada", "60×90, 54×90", "CAL 90 – 110", "Bulto"], ["Camiseta", "Mini, Chica, Mediana, Grande", "CAL 170 – 190", "Bulto"]], "service": null, "stages": ["Mezclado", "Extrusión", "Impresión (si aplica)", "Corte / Sellado", "Empaque"]}, {"n": 3, "name": "BIOPOLI POLISEDA", "sku": "18 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli Poliseda"], ["Tipos disponibles", "Rollo, Asa, Rollo Asa"], ["Material base", "HDPE"], ["Colores", "Por pedido"], ["Rango de calibres", "CAL 60 – 80 (calibre delgado, característico de la línea)"], ["Presentación", "Bulto"], ["Descripción general", "Empaque plástico flexible y semitransparente, con acabado satinado, orientado más a la presentación del producto que a la carga pesada — su apariencia fina proyecta una imagen de marca más cuidada."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["Rollo", "15×20 a 40×60 (7 medidas) + medida especial", "CAL 60 – 80", "Bulto"], ["Asa", "Super mini 18×32 a Grande 30×60 (5 medidas) + medida especial", "CAL 60 – 80", "Bulto"], ["Rollo Asa", "Mini 22×35 a Grande 30×60 (4 medidas)", "CAL 60 – 80", "Bulto"]], "service": null, "stages": ["Mezclado", "Extrusión", "Impresión (si aplica)", "Corte / Sellado", "Empaque"]}, {"n": 4, "name": "BIOPOLI POPOTE", "sku": "11 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli Popote"], ["Tipos disponibles", "Popote Granel, Estuchado, Agitador"], ["Material base", "PP (polipropileno) + LLDPE/HDPE + Carga (mezcla para costeo)"], ["Colores", "Colores, Negro, Transparente, Tapioca"], ["Rango de calibres", "N/A (medido por longitud, no calibre)"], ["Presentación", "Bulto (granel) / Caja (estuchado)"], ["Descripción general", "Popote de polipropileno con una mezcla de polietilenos y carga mineral para costeo, disponible a granel o estuchado, en distintos colores y en versión biodegradable tipo tapioca."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["Popote Granel", "Corto 21 cm / Largo 26 cm × Colores/Negro; Tapioca Negro/Color (6 variantes)", "5 Paq de 1 kg", "Bulto"], ["Estuchado", "Largo 26 cm / Corto 21 cm Transparente", "500 piezas", "Caja"], ["Agitador", "12, 13, 15 cm", "4 Paq de 1 kg", "Bulto"]], "service": null, "stages": ["Mezclado", "Extrusión", "Corte", "Empaque"]}, {"n": 5, "name": "BIOPOLI CUCHARA", "sku": "5 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli Cuchara"], ["Tipos disponibles", "Caja de Cuchara, Bulto de Cuchara"], ["Material base", "PP (polipropileno)"], ["Colores", "Blanca, Negra, Beige Bio, Colores (mediana)"], ["Rango de calibres", "N/A"], ["Presentación", "Caja / Bulto (granel 10 kg)"], ["Descripción general", "Cubierto desechable de polipropileno, disponible en caja o a granel, en blanco, negro, beige biodegradable y colores — pensado para comedores, eventos y servicio de alimentos."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["Caja de Cuchara", "Sopera Blanca 40/100", "N/A", "Caja"], ["Bulto de Cuchara", "Sopera Blanca / Negra / Beige Bio, Mediana Colores (4 variantes)", "N/A", "Bulto (Granel 10 kg)"]], "service": null, "stages": ["Mezclado", "Inyección", "Empaque"]}, {"n": 6, "name": "BIOPOLI TRIPLE Y CORDÓN", "sku": "5 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli Triple y Cordón"], ["Tipos disponibles", "Triple (2, 3, 5 Hilos, Tricolor), Cordón"], ["Material base", "LDPE"], ["Colores", "Sí (cliente especifica color al pedir)"], ["Rango de calibres", "N/A"], ["Presentación", "Bulto — se fabrica sobre pedido"], ["Descripción general", "Hilo tipo rafia y cordón, tejido en 2, 3 o 5 hilos (o tricolor), usado tanto para bolsas de malla como para tejer asientos de sillas, gracias a su resistencia y flexibilidad."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["General", "Triple 2 Hilos, 3 Hilos, 5 Hilos, Tricolor, Cordón (5 variantes, sobre pedido)", "N/A", "Bulto"]], "service": null, "stages": ["Mezclado", "Extrusión", "Empaque"]}, {"n": 7, "name": "BIOPOLI ECOBAG", "sku": "34 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli EcoBag"], ["Tipos disponibles", "Bolsa para la Basura, Asa Plástico Negra, Rollo Polipapel Negro, Rollo Plástico Color, Asa Polipapel Negra"], ["Material base", "LLDPE (mayoría) + LDPE (menor proporción)"], ["Colores", "Negra (línea principal), Color (rollo)"], ["Rango de calibres", "CAL 90 a CAL 370 (varía por tipo)"], ["Presentación", "Bulto"], ["Descripción general", "Línea enfocada en manejo de residuos: bolsas para basura, bolsas con asa y rollos. Duraderas y de excelente calidad."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["Bolsa para la Basura", "50×70 a 90×120 Negra (5 medidas)", "CAL 140 – 310", "Bulto"], ["Asa Plástico Negra", "Licorera a Jumbo (5 medidas)", "CAL 290 – 370", "Bulto"], ["Rollo Polipapel Negro", "15×25 a 60×90 (9 medidas)", "CAL 90 – 110", "Bulto"], ["Rollo Plástico Color", "15×25 a 60×90 (9 medidas)", "CAL 140 – 160", "Bulto"], ["Asa Polipapel Negra", "Mini a Extra Jumbo (6 medidas)", "CAL 170 – 190", "Bulto"]], "service": null, "stages": ["Mezclado", "Extrusión", "Impresión (si aplica)", "Corte / Sellado", "Empaque"]}, {"n": 8, "name": "BIOPOLI PAPER-SOLUTIONS", "sku": "12 SKUs en catálogo actual", "ficha": [["Línea", "Biopoli Paper-Solutions"], ["Tipos disponibles", "Bolsa de Papel Kraft, Bolsa de Papel Blanca"], ["Material base", "Papel Kraft / Papel Blanco"], ["Colores", "Kraft (natural), Blanco"], ["Rango de calibres", "N/A (papel — ver gramaje)"], ["Presentación", "Bulto (paquetes de 500–1000 piezas)"], ["Descripción general", "Bolsa de papel kraft o blanco, con el aspecto natural y la textura característica de las bolsas de panadería — pensada para negocios que buscan una imagen artesanal y un empaque amigable con el ambiente."]], "variants": [["Tipo", "Medidas disponibles", "Calibre", "Presentación"], ["Bolsa de Papel Kraft", "#1, #2, #3, #4, #6, #8, #12, #14, #25, #35", "Paq. 500–1000 pzas", "Bulto"], ["Bolsa de Papel Kraft — medida especial", "Con impresión, sobre pedido", "N/A", "Bulto"], ["Bolsa de Papel Blanca — medida especial", "Con impresión, sobre pedido", "N/A", "Bulto"]], "service": null, "stages": ["Impresión (si aplica)", "Corte / Sellado", "Empaque"]}, {"n": 9, "name": "BIOPOLI FLEX SOLUTIONS", "sku": "1 (servicio) SKUs en catálogo actual", "ficha": [["Tipo", "Servicio de impresión (5 tintas) aplicado sobre otras líneas"], ["Líneas que puede imprimir", "Biopoli Plástico, Biopoli Polipapel, Biopoli Poliseda, Celofán"], ["Cotización", "Bajo pedido — contactar directamente"]], "variants": null, "service": null}];
+const IMG = {1:'img/proceso-1.png',2:'img/proceso-2.png',3:'img/proceso-3.png',4:'img/proceso-4.png',5:'img/proceso-5.png',6:'img/proceso-6.png',7:'img/proceso-1.png',8:'img/proceso-8.png'};
+const CHIP_KEYS = ['Tipos disponibles','Líneas que puede imprimir'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad2 = n => String(n).padStart(2,'0');
+const accentOf = n => n % 2 ? 'var(--yel)' : 'var(--red)';
+const skuNum = l => (l.sku.match(/^\d+/)||['1'])[0];
+const splitName = name => { const w = name.split(' '); return [w[0], w.slice(1).join(' ')]; };
+
+const chrome = (label, idx, total) => `
+  <div class="top"><span class="eyebrow"><span class="tri"><i></i><i></i><i></i></span>Fichas técnicas · Edición nov. 2026</span><span class="eyebrow">${label}</span></div>
+  <div class="bot"><span class="eyebrow">Grupo Bolsas y Poliductos de Morelia</span><span class="pno"><b>${pad2(idx)}</b> / ${pad2(total)}</span></div>`;
+
+const pages = [];  // {cls, html(label fn)}
+// cover
+pages.push({cls:'cover', title:'Portada', build:(i,t)=>`
+  <div class="wm" aria-hidden="true">BIOPOLI</div>
+  <div>
+    <h1 class="big"><span>Fichas</span><span class="y">técnicas</span></h1>
+    <p class="lede">Las nueve líneas Biopoli en un solo lugar: qué son, cómo se fabrican y en qué medidas y calibres las producimos.</p>
+    <div class="stats">
+      <div class="stat"><b>09</b><span>Líneas</span></div>
+      <div class="stat"><b>181</b><span>Productos en catálogo</span></div>
+      <div class="stat"><b>Morelia</b><span>Michoacán, México</span></div>
+    </div>
+  </div>
+  <img class="logo" src="img/logo.png" alt="Grupo Bolsas y Poliductos de Morelia, S.A. de C.V.">
+  <div class="tape"></div>`, noChrome:true});
+
+// contents (filled after numbering)
+pages.push({cls:'toc', title:'Contenido', build:(i,t)=>`${chrome('Contenido',i,t)}
+  <div><div class="eyebrow"><b>En este número</b></div><h2 class="h-xl">Nueve líneas,<br><em>un catálogo</em></h2>
+  <p class="vnote" style="max-width:24em">Toca una línea para ir directo a su ficha. Cada una incluye ficha técnica, diagrama de proceso y tabla de variantes.</p></div>
+  <ol>${DATA.map(l=>{const [a,b]=splitName(l.name);return `<li style="--accent:${accentOf(l.n)}"><button data-line="${l.n}"><span class="n">${pad2(l.n)}</span><span class="t"><small>${esc(a)}</small>${esc(b)}</span><span class="s">${esc(skuNum(l))} ${l.n===9?'servicio':'SKUs'}</span><span class="p" data-pn="${l.n}"></span></button></li>`}).join('')}</ol>`});
+
+for (const l of DATA) {
+  const [brand, rest] = splitName(l.name);
+  const sizeCls = rest.length > 13 ? 'l' : rest.length > 9 ? 'm' : '';
+  const acc = accentOf(l.n);
+  const rows = l.ficha.filter(r => r[0] !== 'Línea');
+  const descRow = rows.find(r => r[0] === 'Descripción general');
+  const specRows = rows.filter(r => r !== descRow);
+  const desc = descRow ? descRow[1] : (l.note || '');
+  const lineStart = pages.length;
+  pages.push({cls:'opener', accent:acc, line:l.n, title:l.name, build:(i,t)=>`${chrome('Línea '+pad2(l.n)+' / 09 · '+esc(l.name),i,t)}
+    <div class="op-l">
+      <div class="num" aria-hidden="true">${pad2(l.n)}</div>
+      <div>
+        <div class="kick">LÍNEA ${l.n} DE 9</div>
+        <h2 class="lname ${sizeCls}"><small>${esc(brand)}</small>${esc(rest)}</h2>
+        <div class="sku"><b>${esc(skuNum(l))}</b><span>${l.n===9?'servicio de impresión':'SKUs en catálogo actual'}</span></div>
+      </div>
+    </div>
+    <div class="op-r">
+      <div class="sheet-h eyebrow"><b>Ficha técnica</b></div>
+      <dl class="spec">${specRows.map(r=>`<dt>${esc(r[0])}</dt><dd>${CHIP_KEYS.includes(r[0])?`<span class="chips">${r[1].split(/,\s*/).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</span>`:esc(r[1])}</dd>`).join('')}</dl>
+      ${desc?`<div class="desc"><p>${esc(desc)}</p></div>`:''}
+    </div>`});
+  if (IMG[l.n]) pages.push({cls:'proc', accent:acc, line:l.n, title:'Proceso '+l.name, build:(i,t)=>`${chrome('Proceso · '+esc(l.name),i,t)}
+    <div><div class="eyebrow"><b>Proceso</b> · línea ${pad2(l.n)}</div><h2 class="h-l">Así se fabrica <em>${esc(l.name.toLowerCase().replace(/^biopoli /,'Biopoli '))}</em></h2></div>
+    <div class="plate"><img src="${IMG[l.n]}" alt="Diagrama de proceso de ${esc(l.name)}"></div>
+    <div class="stages">${(l.stages||[]).map((s,k)=>{const o=/\(si aplica\)/.test(s);return `<div><b>${pad2(k+1)}</b><span>${esc(s.replace(/\s*\(si aplica\)/,''))}</span>${o?'<em>Si aplica</em>':''}</div>`}).join('')}</div>
+    <div class="fig eyebrow"><span>Fig. ${pad2(l.n)} · Diagrama de proceso</span><span>Etapas generales de fabricación</span></div>`});
+  if (l.variants && l.variants.length > 1) {
+    const [head, ...body] = l.variants;
+    pages.push({cls:'vars', accent:acc, line:l.n, title:'Variantes '+l.name, build:(i,t)=>`${chrome('Variantes · '+esc(l.name),i,t)}
+      <div class="vl">
+        <div><div class="eyebrow"><b>Variantes</b> · línea ${pad2(l.n)}</div><h2 class="h-l" style="font-size:calc(var(--u)*4.6)">Medidas<br>y calibres</h2></div>
+        <div><div class="vbig">${esc(skuNum(l))}</div><p class="vnote">SKUs en catálogo actual, agrupados en ${body.length} ${body.length===1?'tipo':'tipos'}.</p></div>
+      </div>
+      <div class="tw"><table class="tbl"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${body.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="c">${esc(r[2])}</td><td class="p">${esc(r[3])}</td></tr>`).join('')}</tbody></table></div>`});
+  }
+}
+pages.push({cls:'end', title:'Cierre', build:(i,t)=>`${chrome('Cierre',i,t)}
+  <img src="img/mascota.png" alt="Mascota de Grupo Bolsas y Poliductos de Morelia">
+  <div><div class="eyebrow"><b>Y ahora</b> · tu medida</div><h2 class="h-xl">¿Buscas algo <em>a tu medida?</em></h2>
+  <p>Varias líneas se fabrican sobre pedido, con impresión de hasta 5 tintas. La cotización es bajo pedido: contáctanos directamente.</p>
+  <span class="cta">Cotización bajo pedido</span></div>
+  <div class="tape"></div>`});
+
+/* ---------- build DOM ---------- */
+const stage = document.getElementById('stage');
+const total = pages.length;
+const els = pages.map((p, i) => {
+  const s = document.createElement('section');
+  s.className = 'page ' + p.cls;
+  s.setAttribute('aria-label', p.title);
+  s.dataset.i = i;
+  s.innerHTML = `<div class="pg" style="${p.accent?`--accent:${p.accent}`:''}">${p.build(i+1,total)}</div><div class="shade"></div>`;
+  stage.appendChild(s);
+  return s;
+});
+pages.forEach((p,i)=>{ if(p.cls==='opener') p.pg = i; });
+document.querySelectorAll('[data-pn]').forEach(e=>{ const idx = pages.findIndex(p=>p.cls==='opener'&&p.line==e.dataset.pn); e.textContent = 'P. '+pad2(idx+1); });
+document.querySelectorAll('[data-line]').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); go(pages.findIndex(p=>p.cls==='opener'&&p.line==b.dataset.line)); }));
+
+/* ---------- navigation ---------- */
+let cur = 0;
+const prev = document.getElementById('prev'), next = document.getElementById('next');
+const count = document.getElementById('count'), prog = document.getElementById('progress');
+function render(){
+  els.forEach((el,i)=>{
+    el.classList.toggle('turned', i < cur);
+    el.classList.toggle('next', i === cur+1);
+    el.classList.toggle('far', i > cur+1);
+    el.style.zIndex = String(total - i);
+    if (i === cur) el.removeAttribute('inert'); else el.setAttribute('inert','');
+  });
+  prev.disabled = cur === 0; next.disabled = cur === total-1;
+  count.innerHTML = `<b>${pad2(cur+1)}</b> / ${pad2(total)}`;
+  prog.style.width = (cur/(total-1)*100)+'%';
+  const h = '#pagina-'+(cur+1);
+  try { if (location.hash !== h) history.replaceState(null,'',h); } catch(e){}
+}
+function go(i){ cur = Math.max(0, Math.min(total-1, i)); render(); }
+prev.onclick = () => go(cur-1); next.onclick = () => go(cur+1);
+document.getElementById('home').onclick = () => go(1);
+addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='PageDown'||(e.key===' '&&!e.shiftKey)) { e.preventDefault(); go(cur+1); }
+  else if (e.key==='ArrowLeft'||e.key==='PageUp'||(e.key===' '&&e.shiftKey)) { e.preventDefault(); go(cur-1); }
+  else if (e.key==='Home') go(0); else if (e.key==='End') go(total-1);
+});
+addEventListener('hashchange', () => { const m = location.hash.match(/^#pagina-(\d+)$/); if (m) go(+m[1]-1); });
+
+/* ---------- drag / swipe to turn ---------- */
+let drag = null;
+stage.addEventListener('pointerdown', e => {
+  const sc = e.target.closest('.plate,.tw');
+  if (e.target.closest('button,a') || (sc && sc.scrollWidth > sc.clientWidth + 2)) return;
+  drag = {x:e.clientX, y:e.clientY, w:stage.clientWidth, mode:null, id:e.pointerId};
+});
+stage.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.mode) {
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+    if (Math.abs(dy) > Math.abs(dx)) { drag = null; return; }
+    drag.mode = dx < 0 ? 'next' : 'prev';
+    if ((drag.mode==='next' && cur===total-1) || (drag.mode==='prev' && cur===0)) { drag = null; return; }
+    drag.el = drag.mode==='next' ? els[cur] : els[cur-1];
+    stage.classList.add('dragging'); stage.setPointerCapture?.(drag.id);
+    drag.el.style.visibility = 'visible';
+  }
+  const p = Math.max(0, Math.min(1, Math.abs(dx) / (drag.w*0.7)));
+  drag.p = p;
+  const a = drag.mode==='next' ? -112*p : -112*(1-p);
+  drag.el.style.transform = `rotateY(${a}deg)`;
+});
+function endDrag(){
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (!d.mode) return;
+  stage.classList.remove('dragging');
+  d.el.style.transform = ''; d.el.style.visibility = '';
+  if (d.p > .28) go(d.mode==='next' ? cur+1 : cur-1); else render();
+  d.moved = true; suppressClick = true; setTimeout(()=>suppressClick=false, 50);
+}
+let suppressClick = false;
+stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+stage.addEventListener('click', e => {
+  if (suppressClick || e.target.closest('button,a,.tw')) return;
+  const r = stage.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
+  if (x > .72) go(cur+1); else if (x < .18) go(cur-1);
+});
+
+const m0 = location.hash.match(/^#pagina-(\d+)$/);
+cur = m0 ? Math.max(0, Math.min(total-1, +m0[1]-1)) : 0;
+render();
+requestAnimationFrame(()=>requestAnimationFrame(()=>stage.classList.remove('boot')));
+</script>
+
+</html>
